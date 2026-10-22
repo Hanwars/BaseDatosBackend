@@ -23,14 +23,17 @@ import (
 )
 
 type Server struct {
-	conn               *sql.DB
-	userRepository     *repository.UserRepository
-	roleRepository     *repository.RoleRepository
-	categoryRepository *repository.CategoryRepository
-	supplyRepository   *repository.SupplyRepository
-	supplierRepository *repository.SupplierRepository
-	router             *gin.Engine
-	tokenBuilder       security.Builder
+	conn                     *sql.DB
+	userRepository           *repository.UserRepository
+	roleRepository           *repository.RoleRepository
+	categoryRepository       *repository.CategoryRepository
+	supplyRepository         *repository.SupplyRepository
+	supplierRepository       *repository.SupplierRepository
+	clientRepository         *repository.ClientRepository
+	purchaseRepository       *repository.PurchaseRepository
+	purchaseDetailRepository *repository.PurchaseDetailRepository
+	router                   *gin.Engine
+	tokenBuilder             security.Builder
 }
 
 func NewServer(
@@ -39,6 +42,9 @@ func NewServer(
 	categoryRepository *repository.CategoryRepository,
 	supplyRepository *repository.SupplyRepository,
 	supplierRepository *repository.SupplierRepository,
+	clientRepository *repository.ClientRepository,
+	purchaseRepository *repository.PurchaseRepository,
+	purchaseDetailRepository *repository.PurchaseDetailRepository,
 	conn *sql.DB, secret string) (*Server, error) {
 
 	builder, err := security.NewPasetoBuilder(secret)
@@ -47,13 +53,16 @@ func NewServer(
 	}
 
 	server := &Server{
-		conn:               conn,
-		userRepository:     userRepository,
-		roleRepository:     roleRepository,
-		categoryRepository: categoryRepository,
-		supplyRepository:   supplyRepository,
-		supplierRepository: supplierRepository,
-		tokenBuilder:       builder,
+		conn:                     conn,
+		userRepository:           userRepository,
+		roleRepository:           roleRepository,
+		categoryRepository:       categoryRepository,
+		supplyRepository:         supplyRepository,
+		supplierRepository:       supplierRepository,
+		clientRepository:         clientRepository,
+		purchaseRepository:       purchaseRepository,
+		purchaseDetailRepository: purchaseDetailRepository,
+		tokenBuilder:             builder,
 	}
 	router := gin.Default()
 
@@ -113,7 +122,36 @@ func NewServer(
 	authRoutes.DELETE("api/v1/suppliers", server.deleteSupplierJSON)
 	authRoutes.DELETE("api/v1/suppliers/:supplier_id", server.deleteSupplierURI)
 
+	//ROUTES CLIENTS
+	authRoutes.GET("api/v1/clients", server.getAllClients)
+	authRoutes.GET("api/v1/clients/:client_id", server.getClientByID)
+
+	authRoutes.POST("api/v1/clients", server.createClient)
+	authRoutes.PUT("api/v1/clients", server.updateClient)
+	authRoutes.DELETE("api/v1/clients", server.deleteClientJSON)
+	authRoutes.DELETE("api/v1/clients/:client_id", server.deleteClientURI)
+
+	//ROUTES PURCHASES
+	authRoutes.GET("api/v1/purchases", server.getAllPurchases)
+	authRoutes.GET("api/v1/purchases/:purchase_id", server.getPurchaseByID)
+
+	authRoutes.POST("api/v1/purchases", server.createPurchase)
+	authRoutes.PUT("api/v1/purchases", server.updatePurchase)
+	authRoutes.DELETE("api/v1/purchases", server.deletePurchaseJSON)
+	authRoutes.DELETE("api/v1/purchases/:purchase_id", server.deletePurchaseURI)
+
+	//ROUTES PURCHASE DETAILS
+	authRoutes.GET("api/v1/purchases/:purchase_id/details", server.getPurchaseDetails)
+	authRoutes.GET("api/v1/purchase_details/:detail_id", server.getPurchaseDetailByID)
+
+	authRoutes.POST("api/v1/purchase_details", server.createPurchaseDetail)
+	authRoutes.PUT("api/v1/purchase_details", server.updatePurchaseDetail)
+	authRoutes.DELETE("api/v1/purchase_details", server.deletePurchaseDetailJSON)
+	authRoutes.DELETE("api/v1/purchase_details/:detail_id", server.deletePurchaseDetailURI)
+
 	//ROUTES USERS
+	authRoutes.GET("api/v1/profile", server.getProfile)
+	authRoutes.PUT("api/v1/profile", server.updateProfile)
 
 	server.router = router
 	return server, nil

@@ -86,18 +86,20 @@ func (r *SupplyRepository) ObtenerInsumos(
 	var insumos []models.Supply
 
 	for rows.Next() {
-
 		var insumo models.Supply
 
+		// Orden devuelto por SQL Server:
+		// idInsumo, nombre, tipo, stock, idCategoria,
+		// precio, imagen, categoria.
 		err := rows.Scan(
 			&insumo.SupplyID,
 			&insumo.Name,
 			&insumo.Type,
 			&insumo.Stock,
 			&insumo.CategoryID,
-			&insumo.CategoryName,
 			&insumo.Price,
 			&insumo.Image,
+			&insumo.CategoryName,
 		)
 
 		if err != nil {
@@ -140,9 +142,9 @@ func (r *SupplyRepository) ObtenerInsumo(
 		&insumo.Type,
 		&insumo.Stock,
 		&insumo.CategoryID,
-		&insumo.CategoryName,
 		&insumo.Price,
 		&insumo.Image,
+		&insumo.CategoryName,
 	)
 
 	if err != nil {
@@ -191,9 +193,9 @@ func (r *SupplyRepository) ActualizarInsumo(
 		&insumo.Type,
 		&insumo.Stock,
 		&insumo.CategoryID,
-		&categoryName,
 		&insumo.Price,
 		&insumo.Image,
+		&categoryName,
 	)
 
 	if err != nil {

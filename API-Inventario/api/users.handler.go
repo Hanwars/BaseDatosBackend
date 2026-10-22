@@ -3,6 +3,8 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"rest/repository"
+	"rest/security"
 
 	"time"
 
@@ -40,10 +42,20 @@ type updateUserRequest struct {
 	Email    *string `json:"email"`
 }
 
+// UserID se ignora: el perfil que se modifica siempre es el del token.
+// CurrentPassword y NewPassword son opcionales (solo para cambiar contraseña).
 type updateProfileRequest struct {
-	UserID int32   `json:"user_id"`
-	Name   string  `json:"name"`
-	Email  *string `json:"email"`
+	UserID          int32   `json:"user_id"`
+	Name            string  `json:"name" binding:"required"`
+	Email           *string `json:"email"`
+	CurrentPassword *string `json:"current_password"`
+	NewPassword     *string `json:"new_password"`
+}
+
+type profileResponse struct {
+	UserID int32  `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
 }
 
 type updateUserRoleRequest struct {
@@ -99,4 +111,51 @@ func (server *Server) login(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, resp)
 
+}
+
+// getProfile obtiene el perfil del usuario autenticado (id tomado del token).
+func (server *Server) getProfile(ctx *gin.Context) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+
+	user, err := server.userRepository.ObtenerPerfil(ctx, authPayload.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, profileResponse{
+		UserID: user.UserID,
+		Name:   user.Name,
+		Email:  user.Email,
+	})
+}
+
+// updateProfile actualiza nombre, correo y (opcional) contraseña del usuario
+// autenticado. Para cambiar la contraseña se exige la actual.
+func (server *Server) updateProfile(ctx *gin.Context) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+
+	var req updateProfileRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	req.UserID = authPayload.UserID
+
+	tx, err := server.beginAuditTx(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	_, err = repository.NewUserRepository(tx).ActualizarPerfil(
+		ctx, req.UserID, req.Name, req.Email, req.CurrentPassword, req.NewPassword)
+	if err = endAuditTx(ctx, tx, err); err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Perfil actualizado correctamente",
+	})
 }

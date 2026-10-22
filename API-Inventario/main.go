@@ -36,6 +36,9 @@ func main() {
 	categoryRepository := repository.NewCategoryRepository(conn)
 	supplyRepository := repository.NewSupplyRepository(conn)
 	supplierRepository := repository.NewSupplierRepository(conn)
+	clientRepository := repository.NewClientRepository(conn)
+	purchaseRepository := repository.NewPurchaseRepository(conn)
+	purchaseDetailRepository := repository.NewPurchaseDetailRepository(conn)
 
 	// Crear el servidor.
 	server, err := api.NewServer(
@@ -44,6 +47,9 @@ func main() {
 		categoryRepository,
 		supplyRepository,
 		supplierRepository,
+		clientRepository,
+		purchaseRepository,
+		purchaseDetailRepository,
 		conn,
 		config.SECRET,
 	)
