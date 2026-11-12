@@ -32,6 +32,10 @@ type Server struct {
 	clientRepository         *repository.ClientRepository
 	purchaseRepository       *repository.PurchaseRepository
 	purchaseDetailRepository *repository.PurchaseDetailRepository
+	saleRepository           *repository.SaleRepository
+	saleDetailRepository     *repository.SaleDetailRepository
+	reportRepository         *repository.ReportRepository
+	backupDir                string
 	router                   *gin.Engine
 	tokenBuilder             security.Builder
 }
@@ -45,7 +49,9 @@ func NewServer(
 	clientRepository *repository.ClientRepository,
 	purchaseRepository *repository.PurchaseRepository,
 	purchaseDetailRepository *repository.PurchaseDetailRepository,
-	conn *sql.DB, secret string) (*Server, error) {
+	saleRepository *repository.SaleRepository,
+	saleDetailRepository *repository.SaleDetailRepository,
+	conn *sql.DB, secret string, backupDir string) (*Server, error) {
 
 	builder, err := security.NewPasetoBuilder(secret)
 	if err != nil {
@@ -62,6 +68,10 @@ func NewServer(
 		clientRepository:         clientRepository,
 		purchaseRepository:       purchaseRepository,
 		purchaseDetailRepository: purchaseDetailRepository,
+		saleRepository:           saleRepository,
+		saleDetailRepository:     saleDetailRepository,
+		reportRepository:         repository.NewReportRepository(conn),
+		backupDir:                backupDir,
 		tokenBuilder:             builder,
 	}
 	router := gin.Default()
@@ -149,7 +159,41 @@ func NewServer(
 	authRoutes.DELETE("api/v1/purchase_details", server.deletePurchaseDetailJSON)
 	authRoutes.DELETE("api/v1/purchase_details/:detail_id", server.deletePurchaseDetailURI)
 
-	//ROUTES USERS
+	// ROUTES SALES
+	authRoutes.GET("api/v1/sales", server.getAllSales)
+	authRoutes.GET("api/v1/sales/:sale_id", server.getSaleByID)
+	authRoutes.POST("api/v1/sales", server.createSale)
+	authRoutes.PUT("api/v1/sales", server.updateSale)
+	authRoutes.DELETE("api/v1/sales", server.deleteSaleJSON)
+	authRoutes.DELETE("api/v1/sales/:sale_id", server.deleteSaleURI)
+
+	// ROUTES SALE DETAILS
+	authRoutes.GET("api/v1/sales/:sale_id/details", server.getSaleDetails)
+	authRoutes.GET("api/v1/sale_details/:detail_id", server.getSaleDetailByID)
+	authRoutes.POST("api/v1/sale_details", server.createSaleDetail)
+	authRoutes.PUT("api/v1/sale_details", server.updateSaleDetail)
+	authRoutes.DELETE("api/v1/sale_details", server.deleteSaleDetailJSON)
+	authRoutes.DELETE("api/v1/sale_details/:detail_id", server.deleteSaleDetailURI)
+
+	// REPORTES: las consultas consumen vistas SQL camelCase.
+	authRoutes.GET("api/v1/reports/sales-by-client", server.getSalesSummaryByClient)
+	authRoutes.GET("api/v1/reports/inventory", server.getCurrentInventoryReport)
+	authRoutes.GET("api/v1/reports/discount-movements", server.getDiscountMovementsReport)
+
+	// AUDITORÍA Y RESPALDOS (solo administradores).
+	authRoutes.GET("api/v1/audit", server.getAuditRecords)
+	authRoutes.POST("api/v1/database/backup", server.createDatabaseBackup)
+	authRoutes.GET("api/v1/database/backups", server.getDatabaseBackupHistory)
+
+	// ROUTES USERS (administración de usuarios)
+	authRoutes.GET("api/v1/users", server.getAllUsers)
+	authRoutes.GET("api/v1/users/:user_id", server.getUserByID)
+	authRoutes.POST("api/v1/users", server.createUser)
+	authRoutes.PUT("api/v1/users", server.updateUser)
+	authRoutes.DELETE("api/v1/users", server.deleteUserJSON)
+	authRoutes.DELETE("api/v1/users/:user_id", server.deleteUserURI)
+
+	// PERFIL DEL USUARIO AUTENTICADO
 	authRoutes.GET("api/v1/profile", server.getProfile)
 	authRoutes.PUT("api/v1/profile", server.updateProfile)
 

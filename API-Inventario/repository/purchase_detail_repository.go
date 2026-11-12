@@ -28,7 +28,7 @@ func (r *PurchaseDetailRepository) CrearDetalleCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearDetalleCompra @IdCompra = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
+		"EXEC dbo.paCrearDetalleCompra @IdCompra = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
 	)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *PurchaseDetailRepository) ObtenerDetallesCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerDetallesCompra @IdCompra = @p1",
+		"EXEC dbo.paObtenerDetallesCompra @IdCompra = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (r *PurchaseDetailRepository) ObtenerDetalleCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerDetalleCompra @IdDetalle = @p1",
+		"EXEC dbo.paObtenerDetalleCompra @IdDetalle = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (r *PurchaseDetailRepository) ActualizarDetalleCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarDetalleCompra @IdDetalle = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
+		"EXEC dbo.paActualizarDetalleCompra @IdDetalle = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
 	)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func (r *PurchaseDetailRepository) EliminarDetalleCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarDetalleCompra @IdDetalle = @p1",
+		"EXEC dbo.paEliminarDetalleCompra @IdDetalle = @p1",
 	)
 	if err != nil {
 		return err

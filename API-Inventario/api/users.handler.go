@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"rest/repository"
 	"rest/security"
+	"strings"
 
 	"time"
 
@@ -38,7 +39,7 @@ type updateUserRequest struct {
 	UserID   int32   `json:"user_id" binding:"required"`
 	RoleID   int32   `json:"role_id" binding:"required"`
 	Name     string  `json:"name" binding:"required"`
-	Password string  `json:"password" binding:"required"`
+	Password *string `json:"password"`
 	Email    *string `json:"email"`
 }
 
@@ -158,4 +159,157 @@ func (server *Server) updateProfile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Perfil actualizado correctamente",
 	})
+}
+
+func (server *Server) createUser(ctx *gin.Context) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+	if authPayload.Role != 1 {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Solo administradores"})
+		return
+	}
+
+	var req createUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	tx, err := server.beginAuditTx(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	userID, err := repository.NewUserRepository(tx).CrearUsuario(
+		ctx, req.RoleID, req.Name, req.Password, req.Email)
+	if err = endAuditTx(ctx, tx, err); err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusCreated, gin.H{"generated_id": userID})
+}
+
+func (server *Server) updateUser(ctx *gin.Context) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+	if authPayload.Role != 1 {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Solo administradores"})
+		return
+	}
+
+	var req updateUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	if req.Password != nil && strings.TrimSpace(*req.Password) == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "password no puede estar vacío; omítalo para conservar la contraseña"})
+		return
+	}
+	if _, err := server.userRepository.ObtenerUsuario(ctx, req.UserID); err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		}
+		return
+	}
+
+	tx, err := server.beginAuditTx(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	updated, err := repository.NewUserRepository(tx).ActualizarUsuario(
+		ctx, req.UserID, req.RoleID, req.Name, req.Password, req.Email)
+	if err = endAuditTx(ctx, tx, err); err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, updated)
+}
+
+func (server *Server) deleteUserJSON(ctx *gin.Context) {
+	var req deleteUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	server.deleteUser(ctx, req.UserID)
+}
+
+func (server *Server) deleteUserURI(ctx *gin.Context) {
+	var req deleteUserRequestURI
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	server.deleteUser(ctx, req.UserID)
+}
+
+func (server *Server) deleteUser(ctx *gin.Context, userID int32) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+	if authPayload.Role != 1 {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Solo administradores"})
+		return
+	}
+	if userID == authPayload.UserID {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "No puede eliminar su propio usuario"})
+		return
+	}
+	if _, err := server.userRepository.ObtenerUsuario(ctx, userID); err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		}
+		return
+	}
+
+	tx, err := server.beginAuditTx(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	err = repository.NewUserRepository(tx).EliminarUsuario(ctx, userID)
+	if err = endAuditTx(ctx, tx, err); err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Usuario eliminado correctamente"})
+}
+
+func (server *Server) getAllUsers(ctx *gin.Context) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+	if authPayload.Role != 1 {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Solo administradores"})
+		return
+	}
+	users, err := server.userRepository.ObtenerUsuarios(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, users)
+}
+
+func (server *Server) getUserByID(ctx *gin.Context) {
+	authPayload := ctx.MustGet("authorized").(*security.Payload)
+	if authPayload.Role != 1 {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Solo administradores"})
+		return
+	}
+	var req getUserByIDRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	user, err := server.userRepository.ObtenerUsuario(ctx, req.UserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		}
+		return
+	}
+	ctx.JSON(http.StatusOK, user)
 }

@@ -26,7 +26,7 @@ func (r *ClientRepository) CrearCliente(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearCliente @Nombre = @p1, @TelefonoContacto = @p2, @CorreoContacto = @p3",
+		"EXEC dbo.paCrearCliente @Nombre = @p1, @TelefonoContacto = @p2, @CorreoContacto = @p3",
 	)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (r *ClientRepository) ObtenerClientes(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerClientes",
+		"EXEC dbo.paObtenerClientes",
 	)
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (r *ClientRepository) ObtenerCliente(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerCliente @IdCliente = @p1",
+		"EXEC dbo.paObtenerCliente @IdCliente = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (r *ClientRepository) ActualizarCliente(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarCliente @IdCliente = @p1, @Nombre = @p2, @TelefonoContacto = @p3, @CorreoContacto = @p4",
+		"EXEC dbo.paActualizarCliente @IdCliente = @p1, @Nombre = @p2, @TelefonoContacto = @p3, @CorreoContacto = @p4",
 	)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (r *ClientRepository) EliminarCliente(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarCliente @IdCliente = @p1",
+		"EXEC dbo.paEliminarCliente @IdCliente = @p1",
 	)
 	if err != nil {
 		return err

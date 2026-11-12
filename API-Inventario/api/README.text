@@ -1,6 +1,21 @@
-Aqui van los handlers de cada tabla nuestro, los manejadores le dice el profe, que define los endpoints.
-tons hay que ir viendo el codigo del profe para poder hacerlo, los handlers.
-el tiene lo que es el:
-category.handlers.go
-post.handlers.go
-y el server.go que es donde creo que se definen los endpoints
+Nuevas rutas de reportes, auditoría y respaldos:
+
+GET  /api/v1/reports/sales-by-client
+GET  /api/v1/reports/inventory
+GET  /api/v1/reports/discount-movements
+GET  /api/v1/audit?limit=100&table=clientes&operation=UPDATE
+POST /api/v1/database/backup
+GET  /api/v1/database/backups?limit=20
+
+Los endpoints de auditoría y respaldos requieren token de administrador (role ID 1).
+El respaldo requiere BACKUP_DIR configurado y una carpeta accesible para el servicio de SQL Server.
+
+
+Administración de usuarios (solo administrador, role ID 1):
+GET    /api/v1/users
+GET    /api/v1/users/:user_id
+POST   /api/v1/users
+PUT    /api/v1/users
+DELETE /api/v1/users/:user_id
+
+Las rutas de usuario no devuelven contraseñas. Las altas, modificaciones y bajas pasan por transacciones que establecen SESSION_CONTEXT para la auditoría.

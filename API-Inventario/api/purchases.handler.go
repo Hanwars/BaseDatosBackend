@@ -11,10 +11,10 @@ import (
 
 /*
 Compras: el encabezado se crea con totales en 0 y luego se le agregan
-detalles. El trigger trg_DetallesCompra recalcula subtotal, descuento,
+detalles. El trigger disActualizarStockTotalesCompra recalcula subtotal, descuento,
 total y el stock de los insumos cada vez que cambia un detalle.
 Las operaciones que mueven stock (detalles y eliminar compra) usan
-beginAuditTx para que trg_AuditoriaInsumos registre al usuario.
+beginAuditTx para que disAuditoriaInsumos registre al usuario.
 */
 
 // Requests para compras

@@ -2,16 +2,15 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 
 	"rest/models"
 )
 
 type SaleDetailRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewSaleDetailRepository(db *sql.DB) *SaleDetailRepository {
+func NewSaleDetailRepository(db DBTX) *SaleDetailRepository {
 	return &SaleDetailRepository{
 		db: db,
 	}
@@ -29,7 +28,7 @@ func (r *SaleDetailRepository) CrearDetalleVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearDetalleVenta @IdVenta = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
+		"EXEC dbo.paCrearDetalleVenta @IdVenta = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
 	)
 	if err != nil {
 		return nil, err
@@ -71,7 +70,7 @@ func (r *SaleDetailRepository) ObtenerDetallesVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerDetallesVenta @IdVenta = @p1",
+		"EXEC dbo.paObtenerDetallesVenta @IdVenta = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -123,7 +122,7 @@ func (r *SaleDetailRepository) ObtenerDetalleVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerDetalleVenta @IdDetalle = @p1",
+		"EXEC dbo.paObtenerDetalleVenta @IdDetalle = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -165,7 +164,7 @@ func (r *SaleDetailRepository) ActualizarDetalleVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarDetalleVenta @IdDetalle = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
+		"EXEC dbo.paActualizarDetalleVenta @IdDetalle = @p1, @IdInsumo = @p2, @Cantidad = @p3, @PrecioUnitario = @p4, @Descuento = @p5",
 	)
 	if err != nil {
 		return nil, err
@@ -207,7 +206,7 @@ func (r *SaleDetailRepository) EliminarDetalleVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarDetalleVenta @IdDetalle = @p1",
+		"EXEC dbo.paEliminarDetalleVenta @IdDetalle = @p1",
 	)
 	if err != nil {
 		return err

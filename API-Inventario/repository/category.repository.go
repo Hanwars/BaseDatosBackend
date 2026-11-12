@@ -17,12 +17,12 @@ func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 	}
 }
 
-// CrearRol ejecuta el procedimiento almacenado paCrearRol.
+// CrearCategoria ejecuta el procedimiento almacenado paCrearCategoria.
 func (r *CategoryRepository) CrearCategoria(ctx context.Context, name string) (*models.Category, error) {
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearCategoria @Nombre = @p1",
+		"EXEC dbo.paCrearCategoria @Nombre = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -44,12 +44,12 @@ func (r *CategoryRepository) CrearCategoria(ctx context.Context, name string) (*
 	return &category, nil
 }
 
-// ObtenerRoles ejecuta el procedimiento almacenado paObtenerRoles.
+// ObtenerCategorias ejecuta el procedimiento almacenado paObtenerCategorias.
 func (r *CategoryRepository) ObtenerCategorias(ctx context.Context) ([]models.Category, error) {
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerCategorias",
+		"EXEC dbo.paObtenerCategorias",
 	)
 	if err != nil {
 		return nil, err
@@ -87,12 +87,12 @@ func (r *CategoryRepository) ObtenerCategorias(ctx context.Context) ([]models.Ca
 	return categories, nil
 }
 
-// ObtenerRol ejecuta el procedimiento almacenado paObtenerRol.
+// ObtenerCategoria ejecuta el procedimiento almacenado paObtenerCategoria.
 func (r *CategoryRepository) ObtenerCategoria(ctx context.Context, categoryID int32) (*models.Category, error) {
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerCategoria @IdCategoria = @p1",
+		"EXEC dbo.paObtenerCategoria @IdCategoria = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (r *CategoryRepository) ObtenerCategoria(ctx context.Context, categoryID in
 	return &category, nil
 }
 
-// ActualizarRol ejecuta el procedimiento almacenado paActualizarRol.
+// ActualizarCategoria ejecuta el procedimiento almacenado paActualizarCategoria.
 func (r *CategoryRepository) ActualizarCategoria(
 	ctx context.Context,
 	categoryID int32,
@@ -122,7 +122,7 @@ func (r *CategoryRepository) ActualizarCategoria(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarCategoria @IdCategoria = @p1, @Nombre = @p2",
+		"EXEC dbo.paActualizarCategoria @IdCategoria = @p1, @Nombre = @p2",
 	)
 	if err != nil {
 		return nil, err
@@ -147,12 +147,12 @@ func (r *CategoryRepository) ActualizarCategoria(
 	return &category, nil
 }
 
-// EliminarRol ejecuta el procedimiento almacenado paEliminarRol.
+// EliminarCategoria ejecuta el procedimiento almacenado paEliminarCategoria.
 func (r *CategoryRepository) EliminarCategoria(ctx context.Context, category int32) error {
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarCategoria @IdCategoria = @p1",
+		"EXEC dbo.paEliminarCategoria @IdCategoria = @p1",
 	)
 	if err != nil {
 		return err

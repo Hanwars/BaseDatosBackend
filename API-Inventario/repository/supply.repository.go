@@ -29,7 +29,7 @@ func (r *SupplyRepository) CrearInsumo(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearInsumo @Nombre = @p1, @Tipo = @p2, @Stock = @p3, @IdCategoria = @p4, @Precio = @p5, @Imagen = @p6",
+		"EXEC dbo.paCrearInsumo @Nombre = @p1, @Tipo = @p2, @Stock = @p3, @IdCategoria = @p4, @Precio = @p5, @Imagen = @p6",
 	)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *SupplyRepository) ObtenerInsumos(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerInsumos",
+		"EXEC dbo.paObtenerInsumos",
 	)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (r *SupplyRepository) ObtenerInsumo(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerInsumo @IdInsumo = @p1",
+		"EXEC dbo.paObtenerInsumo @IdInsumo = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (r *SupplyRepository) ActualizarInsumo(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarInsumo @IdInsumo = @p1, @Nombre = @p2, @Tipo = @p3, @Stock = @p4, @IdCategoria = @p5, @Precio = @p6, @Imagen = @p7",
+		"EXEC dbo.paActualizarInsumo @IdInsumo = @p1, @Nombre = @p2, @Tipo = @p3, @Stock = @p4, @IdCategoria = @p5, @Precio = @p6, @Imagen = @p7",
 	)
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (r *SupplyRepository) EliminarInsumo(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarInsumo @IdInsumo = @p1",
+		"EXEC dbo.paEliminarInsumo @IdInsumo = @p1",
 	)
 	if err != nil {
 		return err

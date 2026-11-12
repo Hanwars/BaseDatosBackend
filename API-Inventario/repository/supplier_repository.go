@@ -29,7 +29,7 @@ func (r *SupplierRepository) CrearProveedor(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearProveedor @NombreEmpresa = @p1, @TelefonoEmpresa = @p2, @CorreoEmpresa = @p3, @NombreContacto = @p4, @TelefonoContacto = @p5, @CorreoContacto = @p6",
+		"EXEC dbo.paCrearProveedor @NombreEmpresa = @p1, @TelefonoEmpresa = @p2, @CorreoEmpresa = @p3, @NombreContacto = @p4, @TelefonoContacto = @p5, @CorreoContacto = @p6",
 	)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *SupplierRepository) ObtenerProveedores(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerProveedores",
+		"EXEC dbo.paObtenerProveedores",
 	)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (r *SupplierRepository) ObtenerProveedor(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerProveedor @IdProveedor = @p1",
+		"EXEC dbo.paObtenerProveedor @IdProveedor = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (r *SupplierRepository) ActualizarProveedor(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarProveedor @IdProveedor = @p1, @NombreEmpresa = @p2, @TelefonoEmpresa = @p3, @CorreoEmpresa = @p4, @NombreContacto = @p5, @TelefonoContacto = @p6, @CorreoContacto = @p7",
+		"EXEC dbo.paActualizarProveedor @IdProveedor = @p1, @NombreEmpresa = @p2, @TelefonoEmpresa = @p3, @CorreoEmpresa = @p4, @NombreContacto = @p5, @TelefonoContacto = @p6, @CorreoContacto = @p7",
 	)
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (r *SupplierRepository) EliminarProveedor(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarProveedor @IdProveedor = @p1",
+		"EXEC dbo.paEliminarProveedor @IdProveedor = @p1",
 	)
 	if err != nil {
 		return err

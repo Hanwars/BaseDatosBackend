@@ -2,17 +2,16 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"rest/models"
 )
 
 type SaleRepository struct {
-	db *sql.DB
+	db DBTX
 }
 
-func NewSaleRepository(db *sql.DB) *SaleRepository {
+func NewSaleRepository(db DBTX) *SaleRepository {
 	return &SaleRepository{
 		db: db,
 	}
@@ -29,7 +28,7 @@ func (r *SaleRepository) CrearVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearVenta @IdUsuario = @p1, @IdCliente = @p2, @Fecha = @p3, @IVA = @p4",
+		"EXEC dbo.paCrearVenta @IdUsuario = @p1, @IdCliente = @p2, @Fecha = @p3, @IVA = @p4",
 	)
 	if err != nil {
 		return nil, err
@@ -51,14 +50,14 @@ func (r *SaleRepository) CrearVenta(
 	}
 
 	return &models.Sale{
-		SaleID:     saleID,
-		UserID:     userID,
-		ClientID:   clientID,
-		Date:       timeValue(date),
-		Subtotal:   0,
-		Discount:   0,
-		IVA:        iva,
-		Total:      0,
+		SaleID:   saleID,
+		UserID:   userID,
+		ClientID: clientID,
+		Date:     timeValue(date),
+		Subtotal: 0,
+		Discount: 0,
+		IVA:      iva,
+		Total:    0,
 	}, nil
 }
 
@@ -77,7 +76,7 @@ func (r *SaleRepository) ObtenerVentas(ctx context.Context) ([]models.Sale, erro
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerVentas",
+		"EXEC dbo.paObtenerVentas",
 	)
 	if err != nil {
 		return nil, err
@@ -131,7 +130,7 @@ func (r *SaleRepository) ObtenerVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerVenta @IdVenta = @p1",
+		"EXEC dbo.paObtenerVenta @IdVenta = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -175,7 +174,7 @@ func (r *SaleRepository) ActualizarVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarVenta @IdVenta = @p1, @IdUsuario = @p2, @IdCliente = @p3, @Fecha = @p4, @IVA = @p5",
+		"EXEC dbo.paActualizarVenta @IdVenta = @p1, @IdUsuario = @p2, @IdCliente = @p3, @Fecha = @p4, @IVA = @p5",
 	)
 	if err != nil {
 		return nil, err
@@ -219,7 +218,7 @@ func (r *SaleRepository) EliminarVenta(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarVenta @IdVenta = @p1",
+		"EXEC dbo.paEliminarVenta @IdVenta = @p1",
 	)
 	if err != nil {
 		return err

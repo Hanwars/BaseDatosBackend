@@ -8,6 +8,7 @@ type Config struct {
 	ServerURL string `mapstructure:"SERVER_URL"`
 	API       string `mapstructure:"API_VERSION"`
 	SECRET    string `mapstructure:"SECRET"`
+	BackupDir string `mapstructure:"BACKUP_DIR"`
 }
 
 func LoadConfig(path string) (config Config, err error) {

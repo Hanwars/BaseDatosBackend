@@ -11,8 +11,8 @@ import (
 
 /*
 Auditoría con el usuario autenticado.
-Los triggers de auditoría (trg_AuditoriaClientes, trg_AuditoriaInsumos y
-trg_AuditoriaUsuarios) leen SESSION_CONTEXT('idUsuario'). Ese valor debe
+Los triggers de auditoría (disAuditoriaClientes, disAuditoriaInsumos y
+disAuditoriaUsuarios) leen SESSION_CONTEXT('idUsuario'). Ese valor debe
 establecerse en la MISMA conexión SQL que hace la operación, por eso se usa
 una transacción (*sql.Tx), que el repositorio recibe gracias a DBTX.
 */

@@ -72,7 +72,7 @@ func (server *Server) createSupply(ctx *gin.Context) {
 		return
 	}
 
-	// Transacción con el usuario del token para trg_AuditoriaInsumos.
+	// Transacción con el usuario del token para disAuditoriaInsumos.
 	tx, err := server.beginAuditTx(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))

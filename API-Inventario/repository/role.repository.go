@@ -22,7 +22,7 @@ func (r *RoleRepository) CrearRol(ctx context.Context, name string) (*models.Rol
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearRol @Nombre = @p1",
+		"EXEC dbo.paCrearRol @Nombre = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *RoleRepository) ObtenerRoles(ctx context.Context) ([]models.Role, error
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerRoles",
+		"EXEC dbo.paObtenerRoles",
 	)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (r *RoleRepository) ObtenerRol(ctx context.Context, roleID int32) (*models.
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerRol @IdRol = @p1",
+		"EXEC dbo.paObtenerRol @IdRol = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (r *RoleRepository) ActualizarRol(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarRol @IdRol = @p1, @Nombre = @p2",
+		"EXEC dbo.paActualizarRol @IdRol = @p1, @Nombre = @p2",
 	)
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func (r *RoleRepository) EliminarRol(ctx context.Context, roleID int32) error {
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarRol @IdRol = @p1",
+		"EXEC dbo.paEliminarRol @IdRol = @p1",
 	)
 	if err != nil {
 		return err

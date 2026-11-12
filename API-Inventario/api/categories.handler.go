@@ -95,7 +95,7 @@ func (server *Server) deleteCategoryJSON(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	var req deleteCategoryRequestJSON
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))

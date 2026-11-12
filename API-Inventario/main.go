@@ -39,6 +39,8 @@ func main() {
 	clientRepository := repository.NewClientRepository(conn)
 	purchaseRepository := repository.NewPurchaseRepository(conn)
 	purchaseDetailRepository := repository.NewPurchaseDetailRepository(conn)
+	saleRepository := repository.NewSaleRepository(conn)
+	saleDetailRepository := repository.NewSaleDetailRepository(conn)
 
 	// Crear el servidor.
 	server, err := api.NewServer(
@@ -50,8 +52,11 @@ func main() {
 		clientRepository,
 		purchaseRepository,
 		purchaseDetailRepository,
+		saleRepository,
+		saleDetailRepository,
 		conn,
 		config.SECRET,
+		config.BackupDir,
 	)
 	if err != nil {
 		log.Fatal("No se puede iniciar el servidor: ", err)

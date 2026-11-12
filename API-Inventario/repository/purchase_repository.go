@@ -34,7 +34,7 @@ func (r *PurchaseRepository) CrearCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paCrearCompra @IdUsuario = @p1, @IdProveedor = @p2, @Fecha = @p3, @IVA = @p4",
+		"EXEC dbo.paCrearCompra @IdUsuario = @p1, @IdProveedor = @p2, @Fecha = @p3, @IVA = @p4",
 	)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (r *PurchaseRepository) ObtenerCompras(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerCompras",
+		"EXEC dbo.paObtenerCompras",
 	)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (r *PurchaseRepository) ObtenerCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paObtenerCompra @IdCompra = @p1",
+		"EXEC dbo.paObtenerCompra @IdCompra = @p1",
 	)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (r *PurchaseRepository) ActualizarCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paActualizarCompra @IdCompra = @p1, @IdUsuario = @p2, @IdProveedor = @p3, @Fecha = @p4, @IVA = @p5",
+		"EXEC dbo.paActualizarCompra @IdCompra = @p1, @IdUsuario = @p2, @IdProveedor = @p3, @Fecha = @p4, @IVA = @p5",
 	)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (r *PurchaseRepository) EliminarCompra(
 
 	stmt, err := r.db.PrepareContext(
 		ctx,
-		"EXEC paEliminarCompra @IdCompra = @p1",
+		"EXEC dbo.paEliminarCompra @IdCompra = @p1",
 	)
 	if err != nil {
 		return err

@@ -73,7 +73,6 @@ func (server *Server) updateRole(ctx *gin.Context) {
 		return
 	}
 
-
 	_, err := server.roleRepository.ActualizarRol(ctx, req.RoleID, req.Name)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
