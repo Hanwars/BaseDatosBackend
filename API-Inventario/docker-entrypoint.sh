@@ -1,11 +1,13 @@
-
 #!/bin/sh
-set -e
+set -eu
 
+# Las imágenes se guardan en /data/supplies.
 mkdir -p /data/supplies
 
-if [ "$(id -u)" = "0" ]; then
-    chown -R app:app /data 2>/dev/null || true
+# Render puede montar un disco en /data. Como el volumen puede pertenecer a root,
+# se ajustan permisos antes de bajar privilegios para ejecutar la API.
+if [ "$(id -u)" -eq 0 ]; then
+    chown -R app:app /data
     exec su-exec app:app /app/api "$@"
 fi
 
