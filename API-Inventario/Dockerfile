@@ -1,45 +1,43 @@
-# Build stage: usa una versión de Go compatible con go.mod (go 1.26.2).
-FROM golang:1.27.4 AS builder
+# ---------- Build ----------
+# go.mod exige Go >= 1.26.2; la etiqueta 1.26 resuelve al último parche 1.26.x.
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
-# Descargar dependencias por separado para aprovechar la caché de Docker.
+# Dependencias primero para aprovechar la caché de capas.
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copiar el código y compilar un binario estático.
 COPY . .
-RUN mkdir -p /out \
-    && CGO_ENABLED=0 go build \
-    -trimpath \
-    -buildvcs=false \
-    -ldflags="-s -w" \
-    -o /out/api \
-    .
+RUN CGO_ENABLED=0 GOOS=linux go build \
+      -trimpath -buildvcs=false -ldflags="-s -w" \
+      -o /out/api .
 
-# Runtime: no incluye Go ni el código fuente.
-FROM debian:stable-slim AS runtime
+# ---------- Runtime ----------
+FROM alpine:3 AS runtime
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl tzdata \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid 10001 app \
-    && useradd --system --uid 10001 --gid app --home-dir /app --no-create-home app \
-    && mkdir -p /data/supplies \
-    && chown -R app:app /data
+# ca-certificates: TLS hacia Azure SQL. tzdata: zonas horarias. su-exec: bajar privilegios.
+RUN apk add --no-cache ca-certificates tzdata su-exec \
+    && addgroup -S -g 10001 app \
+    && adduser -S -u 10001 -G app -h /app -H app \
+    && mkdir -p /app /data/supplies \
+    && chown -R app:app /app /data
 
 WORKDIR /app
-COPY --from=builder --chown=app:app /out/api ./api
+COPY --from=builder /out/api /app/api
+
+# El script arranca como root solo para arreglar permisos del volumen montado en /data
+# y enseguida ejecuta la API como usuario "app" (sin privilegios).
+# sed elimina CRLF por si el archivo se editó en Windows.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV GIN_MODE=release \
-    SERVER_URL=0.0.0.0:8080 \
-    BACKUP_DIR=
+    SERVER_URL=0.0.0.0:8080
 
-USER 10001:10001
 EXPOSE 8080
 
-# /health comprueba también la conexión con SQL Server.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD ["curl", "-fsS", "http://127.0.0.1:8080/health"]
-
-ENTRYPOINT ["/API-Inventario/api"]
+# Sin HEALTHCHECK de Docker: Northflank usa sus propios health checks
+# (HTTP GET /health en el puerto 8080).
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

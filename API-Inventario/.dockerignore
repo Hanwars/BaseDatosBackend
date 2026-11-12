@@ -1,5 +1,6 @@
 .git
 .gitignore
+.gitattributes
 .vscode
 .idea
 *.log
@@ -11,3 +12,5 @@ data
 backups
 *.bak
 coverage.out
+README*
+api/README.text
