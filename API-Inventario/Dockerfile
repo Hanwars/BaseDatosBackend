@@ -1,43 +1,43 @@
-# syntax=docker/dockerfile:1.7
+# ---------- Build ----------
+# go.mod declara Go 1.26.2; Go 1.27.4 es compatible y contiene las correcciones actuales.
+FROM golang:1.27.4-alpine3.23 AS builder
 
-# Build: cachea módulos antes de copiar el código para acelerar reconstrucciones.
-FROM golang:1.27.4-alpine AS build
 WORKDIR /src
 
-RUN apk add --no-cache ca-certificates
-
+# Dependencias primero para aprovechar la caché de capas de Render/BuildKit.
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+RUN go mod download
 
 COPY . .
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -trimpath -buildvcs=false \
-    -ldflags="-s -w" \
-    -o /out/api ./main.go
+RUN mkdir -p /out \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+       -trimpath -buildvcs=false -ldflags="-s -w" \
+       -o /out/api .
 
-# Imagen de ejecución pequeña, sin compilador ni código fuente.
-FROM alpine:3.22 AS runtime
-RUN apk add --no-cache ca-certificates tzdata \
+# ---------- Runtime ----------
+FROM alpine:3.23 AS runtime
+
+RUN apk add --no-cache ca-certificates tzdata su-exec \
     && addgroup -S -g 10001 app \
     && adduser -S -D -H -u 10001 -G app app \
-    && mkdir -p /data/supplies \
-    && chown -R app:app /data
+    && mkdir -p /app \
+    && chown -R app:app /app
 
 WORKDIR /app
-COPY --from=build --chown=app:app /out/api ./api
+COPY --from=builder /out/api /app/api
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Normaliza finales de línea por si el archivo se editó desde Windows.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod 755 /usr/local/bin/docker-entrypoint.sh \
+    && chmod 755 /app/api
 
 ENV GIN_MODE=release \
-    SERVER_URL=0.0.0.0:8080 \
+    PORT=10000 \
     BACKUP_DIR=
 
-USER 10001:10001
-EXPOSE 8080
+# Render usa PORT en ejecución (10000 por defecto).
+EXPOSE 10000
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1
-
-ENTRYPOINT ["/app/api"]
+# El entrypoint ejecuta la API sin privilegios.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

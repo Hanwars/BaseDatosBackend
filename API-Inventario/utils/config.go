@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -17,8 +18,8 @@ type Config struct {
 	BackupDir string `mapstructure:"BACKUP_DIR"`
 }
 
-// LoadConfig loads app.env when present and then applies environment variables.
-// This supports local development as well as Docker/Northflank/Azure deployments.
+// LoadConfig carga app.env si existe y siempre prioriza las variables de entorno.
+// Render proporciona PORT dinámicamente; por eso PORT tiene prioridad sobre SERVER_URL.
 func LoadConfig(path string) (config Config, err error) {
 	v := viper.New()
 	configPath := filepath.Join(path, "app.env")
@@ -43,7 +44,6 @@ func LoadConfig(path string) (config Config, err error) {
 	config = Config{
 		DBDriver:  get("DB_DRIVER"),
 		DBSource:  get("DB_SOURCE"),
-		ServerURL: get("SERVER_URL"),
 		API:       get("API_VERSION"),
 		SECRET:    get("SECRET"),
 		BackupDir: get("BACKUP_DIR"),
@@ -52,9 +52,17 @@ func LoadConfig(path string) (config Config, err error) {
 	if config.DBDriver == "" {
 		config.DBDriver = "sqlserver"
 	}
-	if config.ServerURL == "" {
-		config.ServerURL = "0.0.0.0:8080"
+
+	// Render define PORT en tiempo de ejecución (normalmente 10000).
+	// Se fuerza 0.0.0.0 para que el proxy de Render pueda alcanzar el servicio.
+	if port := strings.TrimSpace(get("PORT")); port != "" {
+		config.ServerURL = "0.0.0.0:" + port
+	} else if serverURL := strings.TrimSpace(get("SERVER_URL")); serverURL != "" {
+		config.ServerURL = serverURL
+	} else {
+		config.ServerURL = "0.0.0.0:10000"
 	}
+
 	if config.API == "" {
 		config.API = "api/v1"
 	}
@@ -63,6 +71,9 @@ func LoadConfig(path string) (config Config, err error) {
 	}
 	if config.SECRET == "" {
 		return config, fmt.Errorf("falta configurar SECRET")
+	}
+	if len(config.SECRET) != 32 {
+		return config, fmt.Errorf("SECRET debe tener exactamente 32 bytes para PASETO v2 local; longitud recibida: %d", len(config.SECRET))
 	}
 
 	return config, nil

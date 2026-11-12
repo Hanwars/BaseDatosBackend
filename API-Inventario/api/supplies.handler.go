@@ -1,12 +1,13 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"rest/repository"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -350,10 +351,17 @@ func (server *Server) deleteSupplyImg(ctx *gin.Context) {
 */
 
 func (server *Server) uploadSupplyImg(ctx *gin.Context) {
-
 	fileHeader, err := ctx.FormFile("file0")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	if fileHeader.Size <= 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "El archivo está vacío"})
+		return
+	}
+	if fileHeader.Size > supplyImageMaxBytes {
+		ctx.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "La imagen supera el límite de 2 MB"})
 		return
 	}
 
@@ -364,30 +372,40 @@ func (server *Server) uploadSupplyImg(ctx *gin.Context) {
 	}
 	defer file.Close()
 
-	wd, _ := os.Getwd()
-	fmt.Println("Working directory:", wd)
-	upDir := "/data/supplies"
-
-	err = os.MkdirAll(upDir, os.ModePerm)
+	data, err := io.ReadAll(io.LimitReader(file, supplyImageMaxBytes+1))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "No se pudo leer la imagen"})
+		return
+	}
+	if len(data) == 0 || len(data) > supplyImageMaxBytes {
+		ctx.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "La imagen está vacía o supera el límite de 2 MB"})
 		return
 	}
 
-	filename := uuid.New().String() + "_" + filepath.Base(fileHeader.Filename)
-
-	destinationFile, err := os.Create(filepath.Join(upDir, filename))
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	contentType := http.DetectContentType(data[:min(len(data), 512)])
+	extensionByType := map[string]string{
+		"image/jpeg": ".jpg",
+		"image/png":  ".png",
+		"image/webp": ".webp",
+	}
+	extension, allowed := extensionByType[contentType]
+	if !allowed {
+		ctx.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "Formato no permitido. Utiliza JPG, PNG o WEBP"})
 		return
 	}
-	defer destinationFile.Close()
 
-	_, err = io.Copy(destinationFile, file)
+	filename := uuid.NewString() + extension
+	objectPath := "supplies/" + filename
+	response, err := supabaseStorageRequest(
+		ctx.Request.Context(), http.MethodPost, objectPath,
+		bytes.NewReader(data), contentType,
+	)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		fmt.Printf("ERROR al subir imagen a Supabase Storage: %v\n", err)
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "No se pudo guardar la imagen en el almacenamiento"})
 		return
 	}
+	response.Body.Close()
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"filename": filename,
@@ -396,38 +414,71 @@ func (server *Server) uploadSupplyImg(ctx *gin.Context) {
 }
 
 func (server *Server) downloadSupplyImg(ctx *gin.Context) {
-
 	var req supplyImageRequest
-
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	if !validSupplyImageFilename(req.Filename) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Nombre de imagen no válido"})
+		return
+	}
 
-	fileUrl := "/data/supplies/" + req.Filename
+	response, err := supabaseStorageRequest(
+		ctx.Request.Context(), http.MethodGet, "supplies/"+req.Filename,
+		nil, "",
+	)
+	if err != nil {
+		fmt.Printf("ERROR al descargar imagen desde Supabase Storage: %v\n", err)
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "No se pudo recuperar la imagen del almacenamiento"})
+		return
+	}
+	defer response.Body.Close()
 
-	ctx.File(fileUrl)
+	data, err := io.ReadAll(io.LimitReader(response.Body, supplyImageMaxBytes+1))
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "No se pudo leer la imagen almacenada"})
+		return
+	}
+	if len(data) > supplyImageMaxBytes {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "La imagen almacenada supera el límite permitido"})
+		return
+	}
+
+	contentType := response.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = http.DetectContentType(data[:min(len(data), 512)])
+	}
+	ctx.Header("Cache-Control", "private, max-age=300")
+	ctx.Data(http.StatusOK, contentType, data)
 }
 
 func (server *Server) deleteSupplyImg(ctx *gin.Context) {
-
 	var req supplyImageRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-
-	filePath := filepath.Join("/data/supplies", req.Filename)
-
-	err := os.Remove(filePath)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo eliminar la imagen",
-		})
+	if !validSupplyImageFilename(req.Filename) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Nombre de imagen no válido"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Imagen eliminada correctamente",
-	})
+	response, err := supabaseStorageRequest(
+		ctx.Request.Context(), http.MethodDelete, "supplies/"+req.Filename,
+		nil, "",
+	)
+	if err != nil {
+		fmt.Printf("ERROR al eliminar imagen de Supabase Storage: %v\n", err)
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "No se pudo eliminar la imagen del almacenamiento"})
+		return
+	}
+	response.Body.Close()
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Imagen eliminada correctamente"})
+}
+
+func validSupplyImageFilename(filename string) bool {
+	return filename != "" && filename != "." && filename != ".." &&
+		!strings.ContainsAny(filename, "/\\") && filepath.Base(filename) == filename
 }
