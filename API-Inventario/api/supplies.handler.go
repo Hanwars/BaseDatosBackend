@@ -424,9 +424,8 @@ func (server *Server) downloadSupplyImg(ctx *gin.Context) {
 		return
 	}
 
-	response, err := supabaseStorageRequest(
-		ctx.Request.Context(), http.MethodGet, "supplies/"+req.Filename,
-		nil, "",
+	response, err := supabaseDownloadStorageObject(
+		ctx.Request.Context(), "supplies/"+req.Filename,
 	)
 	if err != nil {
 		fmt.Printf("ERROR al descargar imagen desde Supabase Storage: %v\n", err)
