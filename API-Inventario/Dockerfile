@@ -1,43 +1,43 @@
-# ---------- Build ----------
-# go.mod exige Go >= 1.26.2; la etiqueta 1.26 resuelve al último parche 1.26.x.
-FROM golang:1.26-alpine AS builder
+# syntax=docker/dockerfile:1.7
 
+# Build: cachea módulos antes de copiar el código para acelerar reconstrucciones.
+FROM golang:1.27.4-alpine AS build
 WORKDIR /src
 
-# Dependencias primero para aprovechar la caché de capas.
+RUN apk add --no-cache ca-certificates
+
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build \
-      -trimpath -buildvcs=false -ldflags="-s -w" \
-      -o /out/api .
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -buildvcs=false \
+    -ldflags="-s -w" \
+    -o /out/api ./main.go
 
-# ---------- Runtime ----------
-FROM alpine:3 AS runtime
-
-# ca-certificates: TLS hacia Azure SQL. tzdata: zonas horarias. su-exec: bajar privilegios.
-RUN apk add --no-cache ca-certificates tzdata su-exec \
+# Imagen de ejecución pequeña, sin compilador ni código fuente.
+FROM alpine:3.22 AS runtime
+RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S -g 10001 app \
-    && adduser -S -u 10001 -G app -h /app -H app \
-    && mkdir -p /app /data/supplies \
-    && chown -R app:app /app /data
+    && adduser -S -D -H -u 10001 -G app app \
+    && mkdir -p /data/supplies \
+    && chown -R app:app /data
 
 WORKDIR /app
-COPY --from=builder /out/api /app/api
+COPY --from=build --chown=app:app /out/api ./api
 
-# El script arranca como root solo para arreglar permisos del volumen montado en /data
-# y enseguida ejecuta la API como usuario "app" (sin privilegios).
-# sed elimina CRLF por si el archivo se editó en Windows.
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
-    && chmod +x /usr/local/bin/docker-entrypoint.sh
+ENV GIN_MODE=release \
+    SERVER_URL=0.0.0.0:8080 \
+    BACKUP_DIR=
 
-ENV GIN_MODE=release
-
+USER 10001:10001
 EXPOSE 8080
 
-# Puerto: si existe SERVER_URL se respeta; si no, escucha en $PORT (Render lo define)
-# y, si tampoco existe, en 8080 (ver docker-entrypoint.sh).
-# Sin HEALTHCHECK de Docker: la plataforma usa su propio health check (GET /health).
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1
+
+ENTRYPOINT ["/app/api"]

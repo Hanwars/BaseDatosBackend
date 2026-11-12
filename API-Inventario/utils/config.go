@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -16,49 +17,53 @@ type Config struct {
 	BackupDir string `mapstructure:"BACKUP_DIR"`
 }
 
-// LoadConfig carga la configuración desde app.env (desarrollo local) y/o desde
-// variables de entorno (Docker / Northflank). Si app.env no existe no es un error:
-// las variables de entorno tienen prioridad sobre el archivo.
+// LoadConfig loads app.env when present and then applies environment variables.
+// This supports local development as well as Docker/Northflank/Azure deployments.
 func LoadConfig(path string) (config Config, err error) {
-	viper.AddConfigPath(path)
-	viper.SetConfigName("app")
-	viper.SetConfigType("env")
+	v := viper.New()
+	configPath := filepath.Join(path, "app.env")
+	v.SetConfigFile(configPath)
+	v.SetConfigType("env")
 
-	viper.SetDefault("DB_DRIVER", "sqlserver")
-	viper.SetDefault("SERVER_URL", "0.0.0.0:8080")
-	viper.SetDefault("API_VERSION", "api/v1")
-	viper.SetDefault("BACKUP_DIR", "")
-
-	// BindEnv es necesario para que Unmarshal vea las variables de entorno
-	// cuando la clave no está en un archivo de configuración.
-	viper.AutomaticEnv()
-	for _, key := range []string{
-		"DB_DRIVER", "DB_SOURCE", "SERVER_URL", "API_VERSION", "SECRET", "BACKUP_DIR",
-	} {
-		if err = viper.BindEnv(key); err != nil {
-			return
+	if readErr := v.ReadInConfig(); readErr != nil {
+		if _, statErr := os.Stat(configPath); statErr == nil {
+			return config, fmt.Errorf("no se pudo leer app.env: %w", readErr)
+		} else if !os.IsNotExist(statErr) {
+			return config, fmt.Errorf("no se pudo acceder a app.env: %w", statErr)
 		}
 	}
 
-	if err = viper.ReadInConfig(); err != nil {
-		var notFound viper.ConfigFileNotFoundError
-		if !errors.As(err, &notFound) {
-			return
+	get := func(key string) string {
+		if value, exists := os.LookupEnv(key); exists {
+			return value
 		}
-		err = nil
+		return v.GetString(key)
 	}
 
-	if err = viper.Unmarshal(&config); err != nil {
-		return
+	config = Config{
+		DBDriver:  get("DB_DRIVER"),
+		DBSource:  get("DB_SOURCE"),
+		ServerURL: get("SERVER_URL"),
+		API:       get("API_VERSION"),
+		SECRET:    get("SECRET"),
+		BackupDir: get("BACKUP_DIR"),
 	}
 
+	if config.DBDriver == "" {
+		config.DBDriver = "sqlserver"
+	}
+	if config.ServerURL == "" {
+		config.ServerURL = "0.0.0.0:8080"
+	}
+	if config.API == "" {
+		config.API = "api/v1"
+	}
 	if config.DBSource == "" {
-		err = fmt.Errorf("falta DB_SOURCE (variable de entorno o app.env)")
-		return
+		return config, fmt.Errorf("falta configurar DB_SOURCE")
 	}
 	if config.SECRET == "" {
-		err = fmt.Errorf("falta SECRET (variable de entorno o app.env)")
-		return
+		return config, fmt.Errorf("falta configurar SECRET")
 	}
-	return
+
+	return config, nil
 }

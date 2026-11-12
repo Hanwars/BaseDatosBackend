@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	"rest/api"
 	"rest/repository"
@@ -22,6 +23,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Error, no se pudo conectar a la base de datos: ", err)
 	}
+
+	// Limitar y reutilizar conexiones para evitar abrir una conexión por petición.
+	conn.SetMaxOpenConns(10)
+	conn.SetMaxIdleConns(5)
+	conn.SetConnMaxLifetime(30 * time.Minute)
+	conn.SetConnMaxIdleTime(5 * time.Minute)
+	defer conn.Close()
 
 	// Verificar que la conexión con SQL Server funcione.
 	if err := conn.Ping(); err != nil {

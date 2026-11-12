@@ -11,6 +11,7 @@ Y con ese codigo es suficiente para hacer los handlers y luego hacer la URL.
 */
 
 import (
+	"context"
 	"database/sql"
 
 	"rest/repository"
@@ -75,6 +76,20 @@ func NewServer(
 		tokenBuilder:             builder,
 	}
 	router := gin.Default()
+	// No confiar en cabeceras X-Forwarded-* de proxies no configurados.
+	if err := router.SetTrustedProxies([]string{}); err != nil {
+		return nil, err
+	}
+
+	router.GET("/health", func(ctx *gin.Context) {
+		checkCtx, cancel := context.WithTimeout(ctx.Request.Context(), 2*time.Second)
+		defer cancel()
+		if err := server.conn.PingContext(checkCtx); err != nil {
+			ctx.JSON(503, gin.H{"status": "unavailable", "database": "disconnected"})
+			return
+		}
+		ctx.JSON(200, gin.H{"status": "ok", "database": "connected"})
+	})
 
 	router.Use(cors.Middleware(cors.Config{
 		Origins:         "*",
