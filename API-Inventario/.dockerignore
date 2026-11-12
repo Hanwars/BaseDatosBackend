@@ -1,0 +1,13 @@
+.git
+.gitignore
+.vscode
+.idea
+*.log
+app.env
+.env
+.env.*
+utils/data
+data
+backups
+*.bak
+coverage.out
