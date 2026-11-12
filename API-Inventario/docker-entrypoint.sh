@@ -1,14 +1,18 @@
 #!/bin/sh
-set -eu
+set -e
 
-# Las imágenes se guardan en /data/supplies.
-mkdir -p /data/supplies
+# Puerto: SERVER_URL explícito > $PORT (Render/Heroku-style) > 8080.
+if [ -z "${SERVER_URL:-}" ]; then
+  SERVER_URL="0.0.0.0:${PORT:-8080}"
+fi
+export SERVER_URL
 
-# Render puede montar un disco en /data. Como el volumen puede pertenecer a root,
-# se ajustan permisos antes de bajar privilegios para ejecutar la API.
-if [ "$(id -u)" -eq 0 ]; then
-    chown -R app:app /data
-    exec su-exec app:app /app/api "$@"
+# Las imágenes de insumos se guardan en /data/supplies (disco/volumen persistente).
+# Un disco nuevo suele montarse como root, así que se corrigen los permisos aquí.
+mkdir -p /data/supplies 2>/dev/null || true
+if [ "$(id -u)" = "0" ]; then
+  chown -R app:app /data 2>/dev/null || true
+  exec su-exec app:app /app/api "$@"
 fi
 
 exec /app/api "$@"

@@ -1,43 +1,43 @@
 # ---------- Build ----------
-# go.mod declara Go 1.26.2; Go 1.27.4 es compatible y contiene las correcciones actuales.
-FROM golang:1.27.4-alpine3.23 AS builder
+# go.mod exige Go >= 1.26.2; la etiqueta 1.26 resuelve al último parche 1.26.x.
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
-# Dependencias primero para aprovechar la caché de capas de Render/BuildKit.
+# Dependencias primero para aprovechar la caché de capas.
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN mkdir -p /out \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-       -trimpath -buildvcs=false -ldflags="-s -w" \
-       -o /out/api .
+RUN CGO_ENABLED=0 GOOS=linux go build \
+      -trimpath -buildvcs=false -ldflags="-s -w" \
+      -o /out/api .
 
 # ---------- Runtime ----------
-FROM alpine:3.23 AS runtime
+FROM alpine:3 AS runtime
 
+# ca-certificates: TLS hacia Azure SQL. tzdata: zonas horarias. su-exec: bajar privilegios.
 RUN apk add --no-cache ca-certificates tzdata su-exec \
     && addgroup -S -g 10001 app \
-    && adduser -S -D -H -u 10001 -G app app \
+    && adduser -S -u 10001 -G app -h /app -H app \
     && mkdir -p /app /data/supplies \
     && chown -R app:app /app /data
 
 WORKDIR /app
 COPY --from=builder /out/api /app/api
+
+# El script arranca como root solo para arreglar permisos del volumen montado en /data
+# y enseguida ejecuta la API como usuario "app" (sin privilegios).
+# sed elimina CRLF por si el archivo se editó en Windows.
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-
-# Normaliza finales de línea por si el archivo se editó desde Windows.
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
-    && chmod 755 /usr/local/bin/docker-entrypoint.sh \
-    && chmod 755 /app/api
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
-ENV GIN_MODE=release \
-    PORT=10000 \
-    BACKUP_DIR=
+ENV GIN_MODE=release
 
-# Render usa PORT en ejecución (10000 por defecto).
-EXPOSE 10000
+EXPOSE 8080
 
-# El entrypoint corrige permisos de /data y luego ejecuta la API sin privilegios.
+# Puerto: si existe SERVER_URL se respeta; si no, escucha en $PORT (Render lo define)
+# y, si tampoco existe, en 8080 (ver docker-entrypoint.sh).
+# Sin HEALTHCHECK de Docker: la plataforma usa su propio health check (GET /health).
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
